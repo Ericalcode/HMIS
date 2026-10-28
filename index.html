@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulseCare Enterprise HMIS</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        medical: {
+                            teal: '#0d9488',
+                            emerald: '#059669',
+                            rose: '#e11d48',
+                            amber: '#d97706',
+                            indigo: '#4f46e5'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom scrollbar for dense data panels */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        /* Print styles for invoices and reports */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printable-area, #printable-area * {
+                visibility: visible;
+            }
+            #printable-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="h-full text-slate-800 font-sans antialiased overflow-hidden flex flex-col bg-slate-100 dark:bg-slate-900 dark:text-slate-100">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- Main Wrapper -->
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 transition-all duration-300 z-20">
+            <!-- App Brand Header -->
+            <div class="h-16 flex items-center justify-between px-4 bg-slate-950 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-sky-500/30">
+                        <i class="fa-solid font-bold fa-heart-pulse text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-white text-base tracking-wide leading-none">PulseCare</h1>
+                        <span class="text-[10px] text-sky-400 font-medium tracking-wider uppercase">Enterprise HMIS</span>
+                    </div>
+                </div>
+                <button id="toggle-sidebar" class="text-slate-400 hover:text-white md:hidden">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+                <a href="#dashboard" class="nav-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-white bg-sky-600/20 text-sky-400 border-l-4 border-sky-500">
+                    <i class="fa-solid fa-chart-line w-5 text-center"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#patients" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+                    <i class="fa-solid fa-user-injured w-5 text-center"></i>
+                    <span>Patients & EHR</span>
+                </a>
+                <a href="#appointments" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+                    <i class="fa-solid fa-calendar-check w-5 text-center"></i>
+                    <span>Appointments</span>
+                </a>
+                <a href="#clinical" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+                    <i class="fa-solid fa-stethoscope w-5 text-center"></i>
+                    <span>Doctor Portal</span>
+                </a>
+                <a href="#pharmacy" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+                    <i class="fa-solid fa-pills w-5 text-center"></i>
+                    <span>Pharmacy & Stock</span>
+                </a>
+                <a href="#laboratory" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+                    <i class="fa-solid fa-vials w-5 text-center"></i>
+                    <span>Lab Diagnostics</span>
+                </a>
+                <a href="#ipd" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+                    <i class="fa-solid fa-bed w-5 text-center"></i>
+                    <span>Inpatient & Wards</span>
+                </a>
+                <a href="#billing" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+                    <i class="fa-solid fa-file-invoice-dollar w-5 text-center"></i>
+                    <span>Billing & Claims</span>
+                </a>
+                <a href="#reports" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+                    <i class="fa-solid fa-chart-pie w-5 text-center"></i>
+                    <span>Analytics & Reports</span>
+                </a>
+            </nav>
+
+            <!-- Sidebar Footer Status -->
+            <div class="p-3 border-t border-slate-800 bg-slate-950/50">
+                <div class="flex items-center gap-3 px-2 py-1.5">
+                    <div class="relative">
+                        <img src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=100&auto=format&fit=crop&q=80" class="w-9 h-9 rounded-full object-cover border border-slate-700" alt="Doctor Profile">
+                        <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-900"></span>
+                    </div>
+                    <div class="overflow-hidden">
+                        <p class="text-xs font-semibold text-slate-200 truncate">Dr. Sarah Jenkins</p>
+                        <p class="text-[10px] text-slate-400 truncate">Chief Medical Officer</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Body Content Area -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50 dark:bg-slate-900">
+            
+            <!-- Top Navigation / Header -->
+            <header class="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6 z-10">
+                <div class="flex items-center gap-4">
+                    <button id="mobile-menu-btn" class="text-slate-600 dark:text-slate-300 md:hidden hover:text-slate-900">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <!-- Global Search -->
+                    <div class="relative w-64 md:w-80">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input type="text" id="global-search" placeholder="Search patients, doctors, drugs..." 
+                            class="w-full pl-9 pr-4 py-1.5 bg-slate-100 dark:bg-slate-700/50 border border-transparent dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-800 focus:border-sky-500 transition-all">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <!-- Quick System Time / Date Badge -->
+                    <div class="hidden lg:flex flex-col text-right pr-2 border-r border-slate-200 dark:border-slate-700">
+                        <span id="current-date" class="text-xs font-semibold text-slate-700 dark:text-slate-200"></span>
+                        <span id="current-time" class="text-[11px] text-slate-400"></span>
+                    </div>
+
+                    <!-- Theme Toggle Button -->
+                    <button id="theme-toggle" class="p-2 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                        <i class="fa-solid fa-moon text-lg dark:hidden"></i>
+                        <i class="fa-solid fa-sun text-lg hidden dark:block text-amber-400"></i>
+                    </button>
+
+                    <!-- Notifications Button -->
+                    <div class="relative">
+                        <button id="notif-btn" class="p-2 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors relative">
+                            <i class="fa-solid fa-bell text-lg"></i>
+                            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"></span>
+                        </button>
+                    </div>
+
+                    <div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+
+                    <!-- Action: Quick Register Patient -->
+                    <button onclick="openModal('patient-modal')" class="hidden sm:flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-sm shadow-sky-500/20 transition-all">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>New Patient</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Main View Container (Dynamic Content Loaded Here) -->
+            <main id="main-content" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+                <!-- Modules dynamically switch here via JavaScript -->
+            </main>
+        </div>
+    </div>
+
+    <!-- GLOBAL MODALS CONTAINER -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden transition-opacity"></div>
+
+    <!-- 1. PATIENT REGISTRATION / EDIT MODAL -->
+    <div id="patient-modal" class="modal-dialog fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden transform transition-all">
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800">
+                <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-sky-500"></i>
+                    <span id="patient-modal-title">Register New Patient</span>
+                </h3>
+                <button onclick="closeModal('patient-modal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="patient-form" class="p-6 overflow-y-auto space-y-4 flex-1">
+                <input type="hidden" id="patient-id">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Full Name *</label>
+                        <input type="text" id="patient-name" required class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Age / DOB *</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="number" id="patient-age" placeholder="Age" required class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-sky-500 outline-none">
+                            <select id="patient-gender" required class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-sky-500 outline-none">
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Phone Number *</label>
+                        <input type="tel" id="patient-phone" required class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Email Address</label>
+                        <input type="email" id="patient-email" class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Blood Type</label>
+                        <select id="patient-blood" class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-sky-500 outline-none">
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Insurance Provider</label>
+                        <input type="text" id="patient-insurance" placeholder="e.g. Aetna, BlueCross, Self-Pay" class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Residential Address</label>
+                    <input type="text" id="patient-address" class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-sky-500 outline-none">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Known Allergies</label>
+                        <input type="text" id="patient-allergies" placeholder="e.g., Penicillin, Peanuts" class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Emergency Contact</label>
+                        <input type="text" id="patient-emergency" placeholder="Name & Phone" class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('patient-modal')" class="px-4 py-2 border text-slate-600 dark:text-slate-300 rounded-xl text-sm hover:bg-slate-100 dark:hover:bg-slate-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-sky-600 text-white rounded-xl text-sm font-semibold hover:bg-sky-700 shadow-sm">Save Patient</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. APPOINTMENT MODAL -->
+    <div id="appointment-modal" class="modal-dialog fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 w-full max-w-md overflow-hidden transform transition-all">
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800">
+                <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-plus text-emerald-500"></i>
+                    <span>Schedule Appointment</span>
+                </h3>
+                <button onclick="closeModal('appointment-modal')" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="appointment-form" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Select Patient *</label>
+                    <select id="app-patient" required class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-emerald-500 outline-none"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Select Doctor *</label>
+                    <select id="app-doctor" required class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-emerald-500 outline-none"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Date *</label>
+                        <input type="date" id="app-date" required class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Time Slot *</label>
+                        <input type="time" id="app-time" required class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">Reason for Visit</label>
+                    <textarea id="app-reason" rows="2" class="w-full px-3 py-2 border rounded-xl text-sm dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Symptoms, routine checkup, follow-up..."></textarea>
+                </div>
+                <div class="pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('appointment-modal')" class="px-4 py-2 border text-slate-600 dark:text-slate-300 rounded-xl text-sm">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 shadow-sm">Confirm Booking</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. PRINTABLE INVOICE / REPORT MODAL -->
+    <div id="print-modal" class="modal-dialog fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="px-6 py-3 bg-slate-800 text-white flex justify-between items-center no-print">
+                <span class="text-sm font-semibold">Document Preview</span>
+                <div class="flex gap-2">
+                    <button onclick="window.print()" class="px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs flex items-center gap-1.5 font-medium">
+                        <i class="fa-solid fa-print"></i> Print Document
+                    </button>
+                    <button onclick="closeModal('print-modal')" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs">Close</button>
+                </div>
+            </div>
+            <div id="printable-area" class="p-8 overflow-y-auto flex-1 text-slate-800 bg-white">
+                <!-- Dynamically generated invoice or lab report content -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN SYSTEM APPLICATION LOGIC -->
+    <script>
+        /**
+         * PulseCare HMIS - Central Application State Management
+         * Handles local persistence, dynamic views, mock data, charts and CRUD operations.
+         */
+
+        // Initial Data Generators & Persistence Manager
+        const HMIS_STORAGE_KEY = 'PULSECARE_HMIS_DB_V1';
+
+        const InitialData = {
+            doctors: [
+                { id: 'DOC-101', name: 'Dr. Sarah Jenkins', dept: 'Cardiology', room: '302-A', status: 'Available', phone: '+1 555-0192' },
+                { id: 'DOC-102', name: 'Dr. Robert Chen', dept: 'Neurology', room: '104-B', status: 'In Surgery', phone: '+1 555-0188' },
+                { id: 'DOC-103', name: 'Dr. Maria Garcia', dept: 'Pediatrics', room: '210-C', status: 'Available', phone: '+1 555-0174' },
+                { id: 'DOC-104', name: 'Dr. James Wilson', dept: 'Orthopedics', room: '401-A', status: 'On Leave', phone: '+1 555-0165' },
+                { id: 'DOC-105', name: 'Dr. Emily Watson', dept: 'General Medicine', room: '101-A', status: 'Available', phone: '+1 555-0144' }
+            ],
+            patients: [
+                { id: 'PAT-1001', name: 'John Doe', age: 45, gender: 'Male', phone: '555-0123', email: 'johndoe@gmail.com', blood: 'O+', insurance: 'BlueCross', address: '124 Pine St, NY', allergies: 'Penicillin', emergency: 'Jane Doe (555-9988)', registeredAt: '2026-03-10' },
+                { id: 'PAT-1002', name: 'Alice Smith', age: 32, gender: 'Female', phone: '555-0124', email: 'asmith@yahoo.com', blood: 'A+', insurance: 'Aetna', address: '88 Oak Ave, NY', allergies: 'None', emergency: 'Bob Smith (555-9989)', registeredAt: '2026-03-12' },
+                { id: 'PAT-1003', name: 'Michael Brown', age: 61, gender: 'Male', phone: '555-0125', email: 'mbrown@outlook.com', blood: 'B-', insurance: 'Medicare', address: '420 Elm Rd, NY', allergies: 'Sulfa', emergency: 'Sarah Brown (555-9990)', registeredAt: '2026-03-15' },
+                { id: 'PAT-1004', name: 'Emma Davis', age: 28, gender: 'Female', phone: '555-0126', email: 'edavis@gmail.com', blood: 'AB+', insurance: 'UnitedHealth', address: '15 Maple St, NY', allergies: 'Latex', emergency: 'Tom Davis (555-9991)', registeredAt: '2026-03-18' }
+            ],
+            appointments: [
+                { id: 'APP-501', patientId: 'PAT-1001', patientName: 'John Doe', doctorId: 'DOC-101', doctorName: 'Dr. Sarah Jenkins', date: '2026-10-28', time: '10:30', reason: 'Routine Cardiac Followup', status: 'Checked-in' },
+                { id: 'APP-502', patientId: 'PAT-1002', patientName: 'Alice Smith', doctorId: 'DOC-103', doctorName: 'Dr. Maria Garcia', date: '2026-10-28', time: '11:15', reason: 'Child Health Consultation', status: 'Scheduled' },
+                { id: 'APP-503', patientId: 'PAT-1003', patientName: 'Michael Brown', doctorId: 'DOC-102', doctorName: 'Dr. Robert Chen', date: '2026-10-28', time: '14:00', reason: 'Severe Migraine Symptoms', status: 'Scheduled' },
+                { id: 'APP-504', patientId: 'PAT-1004', patientName: 'Emma Davis', doctorId: 'DOC-105', doctorName: 'Dr. Emily Watson', date: '2026-10-29', time: '09:00', reason: 'Annual Health Checkup', status: 'Scheduled' }
+            ],
+            inventory: [
+                { id: 'DRG-10', name: 'Amoxicillin 500mg', category: 'Antibiotic', stock: 450, unitPrice: 12.50, batch: 'B9821', expiry: '2027-08-15' },
+                { id: 'DRG-11', name: 'Paracetamol 650mg', category: 'Analgesic', stock: 1200, unitPrice: 3.00, batch: 'P4412', expiry: '2028-01-20' },
+                { id: 'DRG-12', name: 'Atorvastatin 20mg', category: 'Cardiovascular', stock: 42, unitPrice: 28.00, batch: 'A1029', expiry: '2026-12-01' }, // Low stock
+                { id: 'DRG-13', name: 'Metformin 850mg', category: 'Antidiabetic', stock: 310, unitPrice: 15.00, batch: 'M8823', expiry: '2027-04-10' },
+                { id: 'DRG-14', name: 'Lisinopril 10mg', category: 'Antihypertensive', stock: 15, unitPrice: 18.50, batch: 'L3319', expiry: '2026-11-15' } // Critical stock
+            ],
+            labTests: [
+                { id: 'LAB-901', patientId: 'PAT-1001', patientName: 'John Doe', testName: 'Lipid Profile Panel', doctor: 'Dr. Sarah Jenkins', date: '2026-10-27', status: 'Completed', result: 'Cholesterol: 210 mg/dL (Elevated), HDL: 45, LDL: 135' },
+                { id: 'LAB-902', patientId: 'PAT-1003', patientName: 'Michael Brown', testName: 'Brain MRI Scan', doctor: 'Dr. Robert Chen', date: '2026-10-28', status: 'Pending', result: 'Pending Lab Review' },
+                { id: 'LAB-903', patientId: 'PAT-1002', patientName: 'Alice Smith', testName: 'Complete Blood Count (CBC)', doctor: 'Dr. Maria Garcia', date: '2026-10-28', status: 'Completed', result: 'WBC: 6.5, RBC: 4.8, Hb: 13.8 g/dL (Normal)' }
+            ],
+            beds: [
+                { id: 'BED-ICU-01', ward: 'ICU', room: 'ICU Bed 1', status: 'Occupied', patientId: 'PAT-1001', patientName: 'John Doe', admittedOn: '2026-10-25' },
+                { id: 'BED-ICU-02', ward: 'ICU', room: 'ICU Bed 2', status: 'Vacant', patientId: null, patientName: null, admittedOn: null },
+                { id: 'BED-GEN-101', ward: 'General Ward', room: 'Room 101 - A', status: 'Occupied', patientId: 'PAT-1003', patientName: 'Michael Brown', admittedOn: '2026-10-26' },
+                { id: 'BED-GEN-102', ward: 'General Ward', room: 'Room 101 - B', status: 'Vacant', patientId: null, patientName: null, admittedOn: null },
+                { id: 'BED-PVT-301', ward: 'Private Deluxe', room: 'Suite 301', status: 'Cleaning', patientId: null, patientName: null, admittedOn: null }
+            ],
+            invoices: [
+                { id: 'INV-8801', patientId: 'PAT-1001', patientName: 'John Doe', date: '2026-10-27', items: [{ desc: 'Cardiac Consultation', cost: 150 }, { desc: 'Lipid Test', cost: 85 }], total: 235, status: 'Paid', method: 'Insurance' },
+                { id: 'INV-8802', patientId: 'PAT-1002', patientName: 'Alice Smith', date: '2026-10-28', items: [{ desc: 'Pediatric Visit', cost: 100 }, { desc: 'CBC Test', cost: 45 }], total: 145, status: 'Unpaid', method: 'Pending' }
+            ],
+            vitals: {},
+            prescriptions: []
+        };
+
+        class HMISApp {
+            constructor() {
+                this.db = this.loadDatabase();
+                this.currentModule = 'dashboard';
+                this.charts = {};
+                this.initUI();
+                this.initRouting();
+                this.startClock();
+            }
+
+            loadDatabase() {
+                const stored = localStorage.getItem(HMIS_STORAGE_KEY);
+                if (stored) {
+                    try { return JSON.parse(stored); } catch (e) { console.error('DB Parse error', e); }
+                }
+                localStorage.setItem(HMIS_STORAGE_KEY, JSON.stringify(InitialData));
+                return JSON.parse(JSON.stringify(InitialData));
+            }
+
+            saveDB() {
+                localStorage.setItem(HMIS_STORAGE_KEY, JSON.stringify(this.db));
+            }
+
+            startClock() {
+                const updateTime = () => {
+                    const now = new Date();
+                    document.getElementById('current-date').innerText = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                    document.getElementById('current-time').innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                };
+                updateTime();
+                setInterval(updateTime, 1000);
+            }
+
+            initUI() {
+                // Dark mode toggle
+                const themeBtn = document.getElementById('theme-toggle');
+                themeBtn.addEventListener('click', () => {
+                    document.documentElement.classList.toggle('dark');
+                });
+
+                // Mobile Sidebar toggle
+                const sidebar = document.getElementById('sidebar');
+                const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+                const closeSidebar = document.getElementById('toggle-sidebar');
+
+                mobileMenuBtn.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+                if (closeSidebar) closeSidebar.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+
+                // Global Search Handler
+                document.getElementById('global-search').addEventListener('input', (e) => {
+                    const query = e.target.value.toLowerCase().trim();
+                    if (query.length > 2) {
+                        this.handleGlobalSearch(query);
+                    }
+                });
+
+                // Form Submit Listeners
+                document.getElementById('patient-form').addEventListener('submit', (e) => this.savePatient(e));
+                document.getElementById('appointment-form').addEventListener('submit', (e) => this.saveAppointment(e));
+            }
+
+            initRouting() {
+                const navLinks = document.querySelectorAll('.nav-link');
+                const handleRoute = () => {
+                    const hash = window.location.hash.replace('#', '') || 'dashboard';
+                    this.currentModule = hash;
+
+                    navLinks.forEach(link => {
+                        if (link.getAttribute('href') === `#${hash}`) {
+                            link.className = "nav-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-white bg-sky-600/20 text-sky-400 border-l-4 border-sky-500";
+                        } else {
+                            link.className = "nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all";
+                        }
+                    });
+
+                    this.renderModule(hash);
+                };
+
+                window.addEventListener('hashchange', handleRoute);
+                handleRoute(); // Initial Load
+            }
+
+            notify(message, type = 'info') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                const colors = {
+                    success: 'bg-emerald-600 text-white',
+                    error: 'bg-rose-600 text-white',
+                    info: 'bg-sky-600 text-white',
+                    warning: 'bg-amber-500 text-white'
+                };
+                toast.className = `p-4 rounded-xl shadow-lg ${colors[type] || colors.info} flex items-center justify-between pointer-events-auto transform transition-all duration-300 translate-y-2 opacity-0`;
+                toast.innerHTML = `
+                    <div class="flex items-center gap-2 text-xs font-semibold">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>${message}</span>
+                    </div>
+                    <button onclick="this.parentElement.remove()" class="text-white/80 hover:text-white ml-4"><i class="fa-solid fa-xmark"></i></button>
+                `;
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.classList.remove('translate-y-2', 'opacity-0');
+                }, 10);
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'translate-y-2');
+                    setTimeout(() => toast.remove(), 300);
+                }, 4000);
+            }
+
+            renderModule(module) {
+                const main = document.getElementById('main-content');
+                main.innerHTML = ''; // Clear container
+
+                switch (module) {
+                    case 'dashboard':
+                        this.renderDashboard(main);
+                        break;
+                    case 'patients':
+                        this.renderPatients(main);
+                        break;
+                    case 'appointments':
+                        this.renderAppointments(main);
+                        break;
+                    case 'clinical':
+                        this.renderClinicalPortal(main);
+                        break;
+                    case 'pharmacy':
+                        this.renderPharmacy(main);
+                        break;
+                    case 'laboratory':
+                        this.renderLaboratory(main);
+                        break;
+                    case 'ipd':
+                        this.renderInpatient(main);
+                        break;
+                    case 'billing':
+                        this.renderBilling(main);
+                        break;
+                    case 'reports':
+                        this.renderReports(main);
+                        break;
+                    default:
+                        this.renderDashboard(main);
+                }
+            }
+
+            /* =========================================================================
+               1. DASHBOARD MODULE
+               ========================================================================= */
+            renderDashboard(container) {
+                const activeBeds = this.db.beds.filter(b => b.status === 'Occupied').length;
+                const totalRevenue = this.db.invoices.reduce((acc, inv) => acc + (inv.status === 'Paid' ? inv.total : 0), 0);
+
+                container.innerHTML = `
+                    <!-- Quick KPI Metrics -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Patients</p>
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">${this.db.patients.length}</h3>
+                                <span class="text-xs font-medium text-emerald-500 flex items-center gap-1 mt-1">
+                                    <i class="fa-solid fa-arrow-up"></i> +12% this month
+                                </span>
+                            </div>
+                            <div class="w-12 h-12 bg-sky-50 dark:bg-sky-950 text-sky-600 rounded-xl flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-users"></i>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Today's Visits</p>
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">${this.db.appointments.length}</h3>
+                                <span class="text-xs font-medium text-sky-500 flex items-center gap-1 mt-1">
+                                    <i class="fa-solid fa-calendar"></i> Scheduled
+                                </span>
+                            </div>
+                            <div class="w-12 h-12 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-user-check"></i>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bed Occupancy</p>
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">${activeBeds} / ${this.db.beds.length}</h3>
+                                <span class="text-xs font-medium text-amber-500 flex items-center gap-1 mt-1">
+                                    <i class="fa-solid fa-bed"></i> ${Math.round((activeBeds/this.db.beds.length)*100)}% Rate
+                                </span>
+                            </div>
+                            <div class="w-12 h-12 bg-amber-50 dark:bg-amber-950 text-amber-600 rounded-xl flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-hospital-user"></i>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Revenue</p>
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">$${totalRevenue.toLocaleString()}</h3>
+                                <span class="text-xs font-medium text-emerald-500 flex items-center gap-1 mt-1">
+                                    <i class="fa-solid fa-circle-check"></i> Cleared Bills
+                                </span>
+                            </div>
+                            <div class="w-12 h-12 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-sack-dollar"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Visualizations -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="font-bold text-slate-800 dark:text-slate-100 text-sm">Patient Admissions Overview</h4>
+                                <span class="text-xs bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-lg text-slate-500">2026 Trend</span>
+                            </div>
+                            <div class="h-64">
+                                <canvas id="chart-admissions"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="font-bold text-slate-800 dark:text-slate-100 text-sm">Department Distribution</h4>
+                            </div>
+                            <div class="h-64 flex items-center justify-center">
+                                <canvas id="chart-departments"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions & Recent Activity -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Quick Actions Panel -->
+                        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
+                            <h4 class="font-bold text-slate-800 dark:text-slate-100 text-sm mb-4">Quick Operations</h4>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button onclick="openModal('patient-modal')" class="p-3 bg-sky-50 hover:bg-sky-100 dark:bg-slate-700 text-sky-700 dark:text-sky-300 rounded-xl text-left transition-all flex flex-col gap-2">
+                                    <i class="fa-solid fa-user-plus text-lg"></i>
+                                    <span class="text-xs font-semibold">Register Patient</span>
+                                </button>
+                                <button onclick="openModal('appointment-modal')" class="p-3 bg-emerald-50 hover:bg-emerald-100 dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 rounded-xl text-left transition-all flex flex-col gap-2">
+                                    <i class="fa-solid fa-calendar-plus text-lg"></i>
+                                    <span class="text-xs font-semibold">Book Appointment</span>
+                                </button>
+                                <button onclick="window.location.hash='#clinical'" class="p-3 bg-indigo-50 hover:bg-indigo-100 dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 rounded-xl text-left transition-all flex flex-col gap-2">
+                                    <i class="fa-solid fa-notes-medical text-lg"></i>
+                                    <span class="text-xs font-semibold">Doctor Notes</span>
+                                </button>
+                                <button onclick="window.location.hash='#billing'" class="p-3 bg-amber-50 hover:bg-amber-100 dark:bg-slate-700 text-amber-700 dark:text-amber-300 rounded-xl text-left transition-all flex flex-col gap-2">
+                                    <i class="fa-solid fa-receipt text-lg"></i>
+                                    <span class="text-xs font-semibold">Create Invoice</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Doctors Availability Overview -->
+                        <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
+                            <h4 class="font-bold text-slate-800 dark:text-slate-100 text-sm mb-4">On-Duty Doctors Status</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="border-b border-slate-100 dark:border-slate-700 text-[11px] font-semibold text-slate-400 uppercase">
+                                            <th class="py-2 px-3">Doctor</th>
+                                            <th class="py-2 px-3">Department</th>
+                                            <th class="py-2 px-3">Room</th>
+                                            <th class="py-2 px-3">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 dark:divide-slate-700 text-xs">
+                                        ${this.db.doctors.map(doc => `
+                                            <tr>
+                                                <td class="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-200">${doc.name}</td>
+                                                <td class="py-2.5 px-3 text-slate-500">${doc.dept}</td>
+                                                <td class="py-2.5 px-3 text-slate-500">${doc.room}</td>
+                                                <td class="py-2.5 px-3">
+                                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                                                        doc.status === 'Available' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' :
+                                                        doc.status === 'In Surgery' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' :
+                                                        'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                                                    }">${doc.status}</span>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                this.renderDashboardCharts();
+            }
+
+            renderDashboardCharts() {
+                // Patient Admission Trend Line Chart
+                const ctx1 = document.getElementById('chart-admissions');
+                if (ctx1) {
+                    this.charts.admissions = new Chart(ctx1, {
+                        type: 'line',
+                        data: {
+                            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+                            datasets: [{
+                                label: 'Inpatient Admissions',
+                                data: [65, 78, 90, 81, 95, 110, 105, 130, 120, 145],
+                                borderColor: '#0284c7',
+                                backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { grid: { borderDash: [4, 4] } },
+                                x: { grid: { display: false } }
+                            }
+                        }
+                    });
+                }
+
+                // Department Doughnut Chart
+                const ctx2 = document.getElementById('chart-departments');
+                if (ctx2) {
+                    this.charts.depts = new Chart(ctx2, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Cardiology', 'Pediatrics', 'Neurology', 'Orthopedics', 'General'],
+                            datasets: [{
+                                data: [30, 20, 15, 25, 10],
+                                backgroundColor: ['#0284c7', '#0d9488', '#4f46e5', '#d97706', '#059669']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { position: 'bottom' } }
+                        }
+                    });
+                }
+            }
+
+            /* =========================================================================
+               2. PATIENT DIRECTORY & EHR MODULE
+               ========================================================================= */
+            renderPatients(container) {
+                container.innerHTML = `
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-5 shadow-sm">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                            <div>
+                                <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg">Patient Registry & Electronic Health Records</h3>
+                                <p class="text-xs text-slate-400">Manage patient intake, demographics, medical history and profiles</p>
+                            </div>
+                            <button onclick="openModal('patient-modal')" class="bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-sm flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> New Patient Intake
+                            </button>
+                        </div>
+
+                        <!-- Search Filter Bar -->
+                        <div class="mb-4">
+                            <input type="text" id="patient-search-input" onkeyup="app.filterPatients()" placeholder="Search patients by name, phone, MRN or blood group..." 
+                                class="w-full md:w-96 px-4 py-2 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        </div>
+
+                        <!-- Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse" id="patients-table">
+                                <thead>
+                                    <tr class="border-b border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-800">
+                                        <th class="py-3 px-4">Patient MRN</th>
+                                        <th class="py-3 px-4">Name & Demographics</th>
+                                        <th class="py-3 px-4">Contact Phone</th>
+                                        <th class="py-3 px-4">Blood Type</th>
+                                        <th class="py-3 px-4">Insurance</th>
+                                        <th class="py-3 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-700 text-xs" id="patient-table-body">
+                                    ${this.generatePatientRows(this.db.patients)}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            generatePatientRows(patients) {
+                if (patients.length === 0) {
+                    return `<tr><td colspan="6" class="text-center py-6 text-slate-400">No patient records found</td></tr>`;
+                }
+                return patients.map(p => `
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                        <td class="py-3 px-4 font-mono font-bold text-sky-600 dark:text-sky-400">${p.id}</td>
+                        <td class="py-3 px-4">
+                            <div class="font-semibold text-slate-800 dark:text-slate-200">${p.name}</div>
+                            <div class="text-[11px] text-slate-400">${p.age} Yrs • ${p.gender}</div>
+                        </td>
+                        <td class="py-3 px-4 text-slate-600 dark:text-slate-300">${p.phone}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-2 py-0.5 bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 font-bold text-[10px] rounded-md border border-rose-200 dark:border-rose-900">${p.blood || 'N/A'}</span>
+                        </td>
+                        <td class="py-3 px-4 text-slate-600 dark:text-slate-300">${p.insurance || 'Self-Pay'}</td>
+                        <td class="py-3 px-4 text-right space-x-2">
+                            <button onclick="app.viewPatientProfile('${p.id}')" title="View Full EHR Profile" class="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg"><i class="fa-solid fa-file-medical text-base"></i></button>
+                            <button onclick="app.editPatient('${p.id}')" title="Edit Patient Info" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg"><i class="fa-solid fa-pen-to-square text-base"></i></button>
+                            <button onclick="app.deletePatient('${p.id}')" title="Delete Record" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg"><i class="fa-solid fa-trash text-base"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            filterPatients() {
+                const query = document.getElementById('patient-search-input').value.toLowerCase();
+                const filtered = this.db.patients.filter(p => 
+                    p.name.toLowerCase().includes(query) || 
+                    p.id.toLowerCase().includes(query) || 
+                    p.phone.includes(query)
+                );
+                document.getElementById('patient-table-body').innerHTML = this.generatePatientRows(filtered);
+            }
+
+            savePatient(e) {
+                e.preventDefault();
+                const id = document.getElementById('patient-id').value;
+                const patientData = {
+                    id: id || `PAT-${Math.floor(1000 + Math.random() * 9000)}`,
+                    name: document.getElementById('patient-name').value,
+                    age: parseInt(document.getElementById('patient-age').value),
+                    gender: document.getElementById('patient-gender').value,
+                    phone: document.getElementById('patient-phone').value,
+                    email: document.getElementById('patient-email').value,
+                    blood: document.getElementById('patient-blood').value,
+                    insurance: document.getElementById('patient-insurance').value,
+                    address: document.getElementById('patient-address').value,
+                    allergies: document.getElementById('patient-allergies').value,
+                    emergency: document.getElementById('patient-emergency').value,
+                    registeredAt: new Date().toISOString().split('T')[0]
+                };
+
+                if (id) {
+                    const idx = this.db.patients.findIndex(p => p.id === id);
+                    if (idx !== -1) this.db.patients[idx] = patientData;
+                } else {
+                    this.db.patients.unshift(patientData);
+                }
+
+                this.saveDB();
+                closeModal('patient-modal');
+                this.notify(`Patient record for ${patientData.name} saved successfully!`, 'success');
+                if (this.currentModule === 'patients') this.renderPatients(document.getElementById('main-content'));
+            }
+
+            editPatient(id) {
+                const p = this.db.patients.find(item => item.id === id);
+                if (!p) return;
+
+                document.getElementById('patient-id').value = p.id;
+                document.getElementById('patient-modal-title').innerText = `Edit Patient Record (${p.id})`;
+                document.getElementById('patient-name').value = p.name;
+                document.getElementById('patient-age').value = p.age;
+                document.getElementById('patient-gender').value = p.gender;
+                document.getElementById('patient-phone').value = p.phone;
+                document.getElementById('patient-email').value = p.email || '';
+                document.getElementById('patient-blood').value = p.blood;
+                document.getElementById('patient-insurance').value = p.insurance || '';
+                document.getElementById('patient-address').value = p.address || '';
+                document.getElementById('patient-allergies').value = p.allergies || '';
+                document.getElementById('patient-emergency').value = p.emergency || '';
+
+                openModal('patient-modal');
+            }
+
+            deletePatient(id) {
+                if (confirm(`Are you sure you want to delete patient record ${id}?`)) {
+                    this.db.patients = this.db.patients.filter(p => p.id !== id);
+                    this.saveDB();
+                    this.notify(`Patient record removed.`, 'warning');
+                    this.renderPatients(document.getElementById('main-content'));
+                }
+            }
+
+            viewPatientProfile(id) {
+                const p = this.db.patients.find(item => item.id === id);
+                if (!p) return;
+
+                const patientLabHistory = this.db.labTests.filter(l => l.patientId === id);
+                const patientAppts = this.db.appointments.filter(a => a.patientId === id);
+
+                const area = document.getElementById('printable-area');
+                area.innerHTML = `
+                    <div class="space-y-6">
+                        <!-- Profile Header -->
+                        <div class="flex justify-between items-start border-b pb-4">
+                            <div>
+                                <span class="text-xs font-bold text-sky-600 tracking-widest uppercase">Electronic Health Record (EHR)</span>
+                                <h2 class="text-2xl font-bold text-slate-800">${p.name}</h2>
+                                <p class="text-xs text-slate-500">MRN: ${p.id} • Registered: ${p.registeredAt}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="px-3 py-1 bg-sky-100 text-sky-800 rounded-full text-xs font-bold">${p.blood || 'Blood N/A'}</span>
+                            </div>
+                        </div>
+
+                        <!-- Grid Info -->
+                        <div class="grid grid-cols-3 gap-4 text-xs">
+                            <div class="bg-slate-50 p-3 rounded-xl border">
+                                <p class="text-slate-400 font-semibold uppercase">Demographics</p>
+                                <p class="mt-1"><strong>Age/Gender:</strong> ${p.age} Yrs / ${p.gender}</p>
+                                <p><strong>Phone:</strong> ${p.phone}</p>
+                                <p><strong>Email:</strong> ${p.email || 'N/A'}</p>
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-xl border">
+                                <p class="text-slate-400 font-semibold uppercase">Insurance & Emergency</p>
+                                <p class="mt-1"><strong>Provider:</strong> ${p.insurance || 'Self-Pay'}</p>
+                                <p><strong>Emergency:</strong> ${p.emergency || 'N/A'}</p>
+                                <p><strong>Address:</strong> ${p.address || 'N/A'}</p>
+                            </div>
+                            <div class="bg-rose-50 p-3 rounded-xl border border-rose-100">
+                                <p class="text-rose-600 font-semibold uppercase">Medical Alerts & Allergies</p>
+                                <p class="mt-1 text-rose-700 font-medium">${p.allergies || 'No known drug allergies'}</p>
+                            </div>
+                        </div>
+
+                        <!-- Historical Visits -->
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm mb-2">Appointment History</h4>
+                            <div class="border rounded-xl overflow-hidden">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-100 border-b">
+                                        <tr>
+                                            <th class="p-2">Date</th>
+                                            <th class="p-2">Doctor</th>
+                                            <th class="p-2">Reason</th>
+                                            <th class="p-2">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y">
+                                        ${patientAppts.length ? patientAppts.map(a => `
+                                            <tr>
+                                                <td class="p-2">${a.date} ${a.time}</td>
+                                                <td class="p-2">${a.doctorName}</td>
+                                                <td class="p-2">${a.reason}</td>
+                                                <td class="p-2"><span class="px-2 py-0.5 bg-slate-100 rounded text-[10px]">${a.status}</span></td>
+                                            </tr>
+                                        `).join('') : '<tr><td colspan="4" class="p-2 text-slate-400 text-center">No past visits recorded</td></tr>'}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Lab Diagnostics -->
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm mb-2">Diagnostic Reports</h4>
+                            <div class="border rounded-xl overflow-hidden">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-100 border-b">
+                                        <tr>
+                                            <th class="p-2">Test Name</th>
+                                            <th class="p-2">Date</th>
+                                            <th class="p-2">Status</th>
+                                            <th class="p-2">Findings</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y">
+                                        ${patientLabHistory.length ? patientLabHistory.map(l => `
+                                            <tr>
+                                                <td class="p-2 font-semibold">${l.testName}</td>
+                                                <td class="p-2">${l.date}</td>
+                                                <td class="p-2"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px]">${l.status}</span></td>
+                                                <td class="p-2 text-slate-600">${l.result}</td>
+                                            </tr>
+                                        `).join('') : '<tr><td colspan="4" class="p-2 text-slate-400 text-center">No lab reports on file</td></tr>'}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                openModal('print-modal');
+            }
+
+            /* =========================================================================
+               3. APPOINTMENT SCHEDULING MODULE
+               ========================================================================= */
+            renderAppointments(container) {
+                container.innerHTML = `
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-5 shadow-sm">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                            <div>
+                                <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg">Appointment Management & Calendar Grid</h3>
+                                <p class="text-xs text-slate-400">Schedule, track status, and dispatch patient consultations</p>
+                            </div>
+                            <button onclick="app.openAppointmentModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-sm flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> Book New Appointment
+                            </button>
+                        </div>
+
+                        <!-- Schedule List -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-800">
+                                        <th class="py-3 px-4">Appt ID</th>
+                                        <th class="py-3 px-4">Patient Name</th>
+                                        <th class="py-3 px-4">Attending Doctor</th>
+                                        <th class="py-3 px-4">Date & Time</th>
+                                        <th class="py-3 px-4">Reason / Notes</th>
+                                        <th class="py-3 px-4">Status</th>
+                                        <th class="py-3 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-700 text-xs">
+                                    ${this.db.appointments.map(a => `
+                                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
+                                            <td class="py-3 px-4 font-mono font-bold text-slate-500">${a.id}</td>
+                                            <td class="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">${a.patientName}</td>
+                                            <td class="py-3 px-4 text-slate-600 dark:text-slate-300">${a.doctorName}</td>
+                                            <td class="py-3 px-4 font-medium text-slate-700 dark:text-slate-300">
+                                                <i class="fa-regular fa-clock text-slate-400 mr-1"></i>${a.date} at ${a.time}
+                                            </td>
+                                            <td class="py-3 px-4 text-slate-500 max-w-xs truncate">${a.reason}</td>
+                                            <td class="py-3 px-4">
+                                                <select onchange="app.updateApptStatus('${a.id}', this.value)" class="text-[11px] font-semibold rounded-lg px-2 py-1 border outline-none ${
+                                                    a.status === 'Checked-in' ? 'bg-sky-50 text-sky-700 border-sky-200' :
+                                                    a.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                    a.status === 'Cancelled' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                                    'bg-amber-50 text-amber-700 border-amber-200'
+                                                }">
+                                                    <option value="Scheduled" ${a.status==='Scheduled'?'selected':''}>Scheduled</option>
+                                                    <option value="Checked-in" ${a.status==='Checked-in'?'selected':''}>Checked-in</option>
+                                                    <option value="Completed" ${a.status==='Completed'?'selected':''}>Completed</option>
+                                                    <option value="Cancelled" ${a.status==='Cancelled'?'selected':''}>Cancelled</option>
+                                                </select>
+                                            </td>
+                                            <td class="py-3 px-4 text-right">
+                                                <button onclick="app.deleteAppointment('${a.id}')" title="Cancel Appointment" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            openAppointmentModal() {
+                // Populate Dropdowns
+                const patientSelect = document.getElementById('app-patient');
+                const doctorSelect = document.getElementById('app-doctor');
+
+                patientSelect.innerHTML = this.db.patients.map(p => `<option value="${p.id}">${p.name} (${p.id})</option>`).join('');
+                doctorSelect.innerHTML = this.db.doctors.map(d => `<option value="${d.id}">${d.name} - ${d.dept}</option>`).join('');
+
+                openModal('appointment-modal');
+            }
+
+            saveAppointment(e) {
+                e.preventDefault();
+                const patientId = document.getElementById('app-patient').value;
+                const doctorId = document.getElementById('app-doctor').value;
+                const patient = this.db.patients.find(p => p.id === patientId);
+                const doctor = this.db.doctors.find(d => d.id === doctorId);
+
+                const newAppt = {
+                    id: `APP-${Math.floor(100 + Math.random() * 900)}`,
+                    patientId,
+                    patientName: patient ? patient.name : 'Unknown',
+                    doctorId,
+                    doctorName: doctor ? doctor.name : 'Unknown',
+                    date: document.getElementById('app-date').value,
+                    time: document.getElementById('app-time').value,
+                    reason: document.getElementById('app-reason').value,
+                    status: 'Scheduled'
+                };
+
+                this.db.appointments.unshift(newAppt);
+                this.saveDB();
+                closeModal('appointment-modal');
+                this.notify(`Appointment booked for ${newAppt.patientName}`, 'success');
+                if (this.currentModule === 'appointments') this.renderAppointments(document.getElementById('main-content'));
+            }
+
+            updateApptStatus(id, status) {
+                const appt = this.db.appointments.find(a => a.id === id);
+                if (appt) {
+                    appt.status = status;
+                    this.saveDB();
+                    this.notify(`Appointment ${id} status changed to ${status}`);
+                }
+            }
+
+            deleteAppointment(id) {
+                if (confirm(`Remove appointment ${id}?`)) {
+                    this.db.appointments = this.db.appointments.filter(a => a.id !== id);
+                    this.saveDB();
+                    this.renderAppointments(document.getElementById('main-content'));
+                }
+            }
+
+            /* =========================================================================
+               4. DOCTOR & CLINICAL PORTAL MODULE
+               ========================================================================= */
+            renderClinicalPortal(container) {
+                container.innerHTML = `
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Patient Queue Selector -->
+                        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
+                            <h4 class="font-bold text-slate-800 dark:text-slate-100 text-sm mb-3 flex items-center justify-between">
+                                <span>Checked-in Patient Queue</span>
+                                <span class="px-2 py-0.5 bg-sky-100 text-sky-800 text-[10px] rounded-full font-bold">Active</span>
+                            </h4>
+                            <div class="space-y-2">
+                                ${this.db.appointments.filter(a => a.status === 'Checked-in' || a.status === 'Scheduled').map(a => `
+                                    <div onclick="app.selectClinicalPatient('${a.patientId}', '${a.id}')" class="p-3 border rounded-xl hover:border-sky-500 cursor-pointer transition-all bg-slate-50 dark:bg-slate-700/40">
+                                        <div class="flex justify-between items-start">
+                                            <span class="font-bold text-xs text-slate-800 dark:text-slate-200">${a.patientName}</span>
+                                            <span class="text-[10px] text-sky-600 bg-sky-50 px-2 py-0.5 rounded font-mono">${a.time}</span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-500 mt-1">Doc: ${a.doctorName}</p>
+                                        <p class="text-[11px] text-slate-400 italic mt-0.5">${a.reason}</p>
+                                    </div>
+                                `).join('') || '<p class="text-xs text-slate-400 py-4 text-center">No patients waiting in queue</p>'}
+                            </div>
+                        </div>
+
+                        <!-- Clinical Diagnostics & SOAP Entry Form -->
+                        <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
+                            <div id="clinical-form-container">
+                                <p class="text-xs text-slate-400 text-center py-12">Select a patient from the queue to start vital recording and prescription entry</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            selectClinicalPatient(patientId, apptId) {
+                const p = this.db.patients.find(item => item.id === patientId);
+                if (!p) return;
+
+                const container = document.getElementById('clinical-form-container');
+                container.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center border-b pb-3 dark:border-slate-700">
+                            <div>
+                                <h3 class="font-bold text-slate-800 dark:text-slate-100 text-base">${p.name}</h3>
+                                <p class="text-xs text-slate-400">MRN: ${p.id} • ${p.age} Yrs • ${p.gender} • Blood: ${p.blood || 'N/A'}</p>
+                            </div>
+                            <span class="px-2.5 py-1 bg-rose-100 text-rose-700 font-bold text-xs rounded-lg">Allergies: ${p.allergies || 'None'}</span>
+                        </div>
+
+                        <!-- Vitals Recording Grid -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div class="bg-slate-50 dark:bg-slate-700/50 p-2.5 rounded-xl border dark:border-slate-600">
+                                <label class="text-[10px] font-bold uppercase text-slate-400">BP (mmHg)</label>
+                                <input type="text" id="vital-bp" placeholder="120/80" class="w-full text-xs font-bold bg-transparent outline-none mt-1">
+                            </div>
+                            <div class="bg-slate-50 dark:bg-slate-700/50 p-2.5 rounded-xl border dark:border-slate-600">
+                                <label class="text-[10px] font-bold uppercase text-slate-400">Pulse (BPM)</label>
+                                <input type="number" id="vital-hr" placeholder="72" class="w-full text-xs font-bold bg-transparent outline-none mt-1">
+                            </div>
+                            <div class="bg-slate-50 dark:bg-slate-700/50 p-2.5 rounded-xl border dark:border-slate-600">
+                                <label class="text-[10px] font-bold uppercase text-slate-400">Temp (°F)</label>
+                                <input type="text" id="vital-temp" placeholder="98.6" class="w-full text-xs font-bold bg-transparent outline-none mt-1">
+                            </div>
+                            <div class="bg-slate-50 dark:bg-slate-700/50 p-2.5 rounded-xl border dark:border-slate-600">
+                                <label class="text-[10px] font-bold uppercase text-slate-400">SpO2 (%)</label>
+                                <input type="number" id="vital-spo2" placeholder="98" class="w-full text-xs font-bold bg-transparent outline-none mt-1">
+                            </div>
+                        </div>
+
+                        <!-- Clinical Notes SOAP Format -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Clinical Impressions & SOAP Notes</label>
+                            <textarea id="clinical-soap" rows="3" class="w-full p-3 border rounded-xl text-xs dark:bg-slate-700 dark:border-slate-600 focus:ring-2 focus:ring-sky-500 outline-none" placeholder="Subjective complaints, Objective findings, Assessment & Plan..."></textarea>
+                        </div>
+
+                        <!-- Prescriptions Generator -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Prescribe Medication</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+                                <select id="rx-drug" class="p-2 border rounded-xl text-xs dark:bg-slate-700 dark:border-slate-600">
+                                    ${this.db.inventory.map(d => `<option value="${d.name}">${d.name} (${d.stock} in stock)</option>`).join('')}
+                                </select>
+                                <input type="text" id="rx-dosage" placeholder="Dosage (e.g. 1 tab twice daily)" class="p-2 border rounded-xl text-xs dark:bg-slate-700 dark:border-slate-600">
+                                <input type="text" id="rx-duration" placeholder="Duration (e.g. 5 days)" class="p-2 border rounded-xl text-xs dark:bg-slate-700 dark:border-slate-600">
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t dark:border-slate-700 flex justify-end gap-3">
+                            <button onclick="app.completeConsultation('${apptId}')" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 shadow-sm">
+                                <i class="fa-solid fa-check-circle mr-1"></i> Save Note & Complete Visit
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            completeConsultation(apptId) {
+                const appt = this.db.appointments.find(a => a.id === apptId);
+                if (appt) {
+                    appt.status = 'Completed';
+                    this.saveDB();
+                    this.notify('Clinical consultation saved and visit marked as Completed!', 'success');
+                    this.renderClinicalPortal(document.getElementById('main-content'));
+                }
+            }
+
+            /* =========================================================================
+               5. PHARMACY & INVENTORY MODULE
+               ========================================================================= */
+            renderPharmacy(container) {
+                container.innerHTML = `
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-5 shadow-sm">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                            <div>
+                                <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg">Pharmacy Inventory & Dispensing Portal</h3>
+                                <p class="text-xs text-slate-400">Track medication stock, batch numbers, exipry dates and alert thresholds</p>
+                            </div>
+                            <button onclick="app.openAddDrugPrompt()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-sm flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> Add Drug Stock
+                            </button>
+                        </div>
+
+                        <!-- Drug Inventory Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-800">
+                                        <th class="py-3 px-4">Item Code</th>
+                                        <th class="py-3 px-4">Drug Name & Category</th>
+                                        <th class="py-3 px-4">Batch Number</th>
+                                        <th class="py-3 px-4">Expiry Date</th>
+                                        <th class="py-3 px-4">Stock Level</th>
+                                        <th class="py-3 px-4">Unit Price</th>
+                                        <th class="py-3 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-700 text-xs">
+                                    ${this.db.inventory.map(item => `
+                                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
+                                            <td class="py-3 px-4 font-mono font-bold text-slate-500">${item.id}</td>
+                                            <td class="py-3 px-4">
+                                                <div class="font-semibold text-slate-800 dark:text-slate-200">${item.name}</div>
+                                                <div class="text-[11px] text-slate-400">${item.category}</div>
+                                            </td>
+                                            <td class="py-3 px-4 font-mono text-slate-600 dark:text-slate-300">${item.batch}</td>
+                                            <td class="py-3 px-4 text-slate-600 dark:text-slate-300">${item.expiry}</td>
+                                            <td class="py-3 px-4">
+                                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                                    item.stock < 30 ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400' :
+                                                    item.stock < 100 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400' :
+                                                    'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+                                                }">${item.stock} Units ${item.stock < 30 ? '(Low Stock)' : ''}</span>
+                                            </td>
+                                            <td class="py-3 px-4 font-semibold text-slate-700 dark:text-slate-200">$${item.unitPrice.toFixed(2)}</td>
+                                            <td class="py-3 px-4 text-right">
+                                                <button onclick="app.restockDrug('${item.id}')" title="Restock Stock" class="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg"><i class="fa-solid fa-boxes-stacked"></i></button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            openAddDrugPrompt() {
+                const name = prompt("Enter Medication Name:");
+                if (!name) return;
+                const category = prompt("Enter Category (e.g., Antibiotic, Analgesic):", "General");
+                const stock = parseInt(prompt("Enter Initial Stock Quantity:", "100"));
+                const price = parseFloat(prompt("Enter Unit Price ($):", "10.00"));
+
+                const newDrug = {
+                    id: `DRG-${Math.floor(10 + Math.random() * 90)}`,
+                    name,
+                    category: category || 'General',
+                    stock: stock || 100,
+                    unitPrice: price || 10.0,
+                    batch: `B${Math.floor(1000 + Math.random() * 9000)}`,
+                    expiry: '2028-12-31'
+                };
+
+                this.db.inventory.push(newDrug);
+                this.saveDB();
+                this.notify(`${name} added to pharmacy inventory!`, 'success');
+                this.renderPharmacy(document.getElementById('main-content'));
+            }
+
+            restockDrug(id) {
+                const item = this.db.inventory.find(i => i.id === id);
+                if (item) {
+                    const qty = parseInt(prompt(`Restock quantity for ${item.name}:`, "50"));
+                    if (qty && !isNaN(qty)) {
+                        item.stock += qty;
+                        this.saveDB();
+                        this.notify(`Added ${qty} units to ${item.name}`, 'success');
+                        this.renderPharmacy(document.getElementById('main-content'));
+                    }
+                }
+            }
+
+            /* =========================================================================
+               6. LABORATORY & DIAGNOSTICS MODULE
+               ========================================================================= */
+            renderLaboratory(container) {
+                container.innerHTML = `
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-5 shadow-sm">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                            <div>
+                                <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg">Laboratory Diagnostic Orders & Reports</h3>
+                                <p class="text-xs text-slate-400">Order lab work, post findings, and print diagnostic certificates</p>
+                            </div>
+                            <button onclick="app.openOrderLabModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-sm flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> Order Lab Test
+                            </button>
+                        </div>
+
+                        <!-- Lab Orders List -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-800">
+                                        <th class="py-3 px-4">Order ID</th>
+                                        <th class="py-3 px-4">Patient</th>
+                                        <th class="py-3 px-4">Test Name</th>
+                                        <th class="py-3 px-4">Ordering Doctor</th>
+                                        <th class="py-3 px-4">Date</th>
+                                        <th class="py-3 px-4">Status</th>
+                                        <th class="py-3 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-700 text-xs">
+                                    ${this.db.labTests.map(lab => `
+                                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
+                                            <td class="py-3 px-4 font-mono font-bold text-slate-500">${lab.id}</td>
+                                            <td class="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">${lab.patientName}</td>
+                                            <td class="py-3 px-4 text-indigo-600 dark:text-indigo-400 font-medium">${lab.testName}</td>
+                                            <td class="py-3 px-4 text-slate-600 dark:text-slate-300">${lab.doctor}</td>
+                                            <td class="py-3 px-4 text-slate-500">${lab.date}</td>
+                                            <td class="py-3 px-4">
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                    lab.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                                }">${lab.status}</span>
+                                            </td>
+                                            <td class="py-3 px-4 text-right space-x-2">
+                                                ${lab.status === 'Pending' ? `
+                                                    <button onclick="app.updateLabResult('${lab.id}')" title="Enter Findings" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg"><i class="fa-solid fa-square-plus"></i> Result</button>
+                                                ` : `
+                                                    <button onclick="app.printLabReport('${lab.id}')" title="Print Lab Certificate" class="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg"><i class="fa-solid fa-print"></i> Print</button>
+                                                `}
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            openOrderLabModal() {
+                const patientId = prompt("Enter Patient MRN (e.g. PAT-1001):", "PAT-1001");
+                const p = this.db.patients.find(item => item.id === patientId);
+                if (!p) {
+                    alert("Patient MRN not found!");
+                    return;
+                }
+                const testName = prompt("Enter Test Name (e.g., Complete Blood Count, Liver Function Test):");
+                if (!testName) return;
+
+                const newLab = {
+                    id: `LAB-${Math.floor(900 + Math.random() * 100)}`,
+                    patientId: p.id,
+                    patientName: p.name,
+                    testName,
+                    doctor: 'Dr. Sarah Jenkins',
+                    date: new Date().toISOString().split('T')[0],
+                    status: 'Pending',
+                    result: 'Awaiting lab findings'
+                };
+
+                this.db.labTests.unshift(newLab);
+                this.saveDB();
+                this.notify(`Lab test ordered for ${p.name}`, 'success');
+                this.renderLaboratory(document.getElementById('main-content'));
+            }
+
+            updateLabResult(id) {
+                const lab = this.db.labTests.find(l => l.id === id);
+                if (lab) {
+                    const res = prompt(`Enter diagnostic findings/results for ${lab.testName}:`);
+                    if (res) {
+                        lab.result = res;
+                        lab.status = 'Completed';
+                        this.saveDB();
+                        this.notify('Lab report updated successfully!', 'success');
+                        this.renderLaboratory(document.getElementById('main-content'));
+                    }
+                }
+            }
+
+            printLabReport(id) {
+                const lab = this.db.labTests.find(l => l.id === id);
+                if (!lab) return;
+
+                const area = document.getElementById('printable-area');
+                area.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-900">PulseCare Diagnostics Lab</h2>
+                                <p class="text-xs text-slate-500">ISO 9001:2026 Certified Laboratory Services</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs font-bold text-slate-700">Lab Order Ref: ${lab.id}</p>
+                                <p class="text-xs text-slate-500">Date: ${lab.date}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border">
+                            <div>
+                                <p><strong>Patient Name:</strong> ${lab.patientName}</p>
+                                <p><strong>Patient ID:</strong> ${lab.patientId}</p>
+                            </div>
+                            <div>
+                                <p><strong>Ordering Physician:</strong> ${lab.doctor}</p>
+                                <p><strong>Test Type:</strong> ${lab.testName}</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <h4 class="font-bold text-sm text-slate-800 mb-2 border-b pb-1">Diagnostic Findings & Results</h4>
+                            <div class="p-4 bg-white border rounded-xl font-mono text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">
+                                ${lab.result}
+                            </div>
+                        </div>
+
+                        <div class="pt-12 flex justify-between text-xs text-slate-500">
+                            <div>
+                                <p class="border-t pt-1 border-slate-300 w-40 text-center">Pathologist Signature</p>
+                            </div>
+                            <div>
+                                <p class="border-t pt-1 border-slate-300 w-40 text-center">Authorized Stamp</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                openModal('print-modal');
+            }
+
+            /* =========================================================================
+               7. INPATIENT & WARD MANAGEMENT (IPD)
+               ========================================================================= */
+            renderInpatient(container) {
+                container.innerHTML = `
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-5 shadow-sm">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                            <div>
+                                <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg">Inpatient Wards & Bed Occupancy Grid</h3>
+                                <p class="text-xs text-slate-400">Manage ward allocations, ICU units, and patient admissions</p>
+                            </div>
+                        </div>
+
+                        <!-- Ward Bed Map Cards -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${this.db.beds.map(bed => `
+                                <div class="p-4 rounded-2xl border ${
+                                    bed.status === 'Occupied' ? 'bg-rose-50/50 border-rose-200 dark:bg-rose-950/20 dark:border-rose-900/50' :
+                                    bed.status === 'Cleaning' ? 'bg-amber-50/50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50' :
+                                    'bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/50'
+                                } flex flex-col justify-between">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <span class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">${bed.ward}</span>
+                                            <h4 class="font-bold text-slate-800 dark:text-slate-100 text-sm">${bed.room}</h4>
+                                        </div>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                            bed.status === 'Occupied' ? 'bg-rose-100 text-rose-700' :
+                                            bed.status === 'Cleaning' ? 'bg-amber-100 text-amber-700' :
+                                            'bg-emerald-100 text-emerald-700'
+                                        }">${bed.status}</span>
+                                    </div>
+
+                                    <div class="my-4 text-xs">
+                                        ${bed.status === 'Occupied' ? `
+                                            <p class="font-semibold text-slate-700 dark:text-slate-200"><i class="fa-solid fa-user-check mr-1 text-sky-500"></i> ${bed.patientName}</p>
+                                            <p class="text-[11px] text-slate-400 mt-0.5">Admitted: ${bed.admittedOn}</p>
+                                        ` : `
+                                            <p class="text-slate-400 italic">Ready for allocation</p>
+                                        `}
+                                    </div>
+
+                                    <div class="pt-2 border-t border-slate-200/60 dark:border-slate-700 flex justify-end">
+                                        ${bed.status === 'Occupied' ? `
+                                            <button onclick="app.dischargePatient('${bed.id}')" class="text-xs px-3 py-1 bg-rose-600 text-white rounded-lg hover:bg-rose-700 font-medium">Discharge</button>
+                                        ` : `
+                                            <button onclick="app.allocateBed('${bed.id}')" class="text-xs px-3 py-1 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium">Allocate Patient</button>
+                                        `}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            allocateBed(bedId) {
+                const bed = this.db.beds.find(b => b.id === bedId);
+                if (!bed) return;
+                const patientId = prompt("Enter Patient MRN to allocate (e.g. PAT-1002):");
+                const patient = this.db.patients.find(p => p.id === patientId);
+                if (!patient) {
+                    alert("Patient not found!");
+                    return;
+                }
+
+                bed.status = 'Occupied';
+                bed.patientId = patient.id;
+                bed.patientName = patient.name;
+                bed.admittedOn = new Date().toISOString().split('T')[0];
+
+                this.saveDB();
+                this.notify(`${patient.name} admitted to ${bed.room}`, 'success');
+                this.renderInpatient(document.getElementById('main-content'));
+            }
+
+            dischargePatient(bedId) {
+                const bed = this.db.beds.find(b => b.id === bedId);
+                if (bed && confirm(`Discharge patient ${bed.patientName} from ${bed.room}?`)) {
+                    this.notify(`Discharged ${bed.patientName}. Bed moved to cleaning queue.`);
+                    bed.status = 'Vacant';
+                    bed.patientId = null;
+                    bed.patientName = null;
+                    bed.admittedOn = null;
+                    this.saveDB();
+                    this.renderInpatient(document.getElementById('main-content'));
+                }
+            }
+
+            /* =========================================================================
+               8. BILLING, INVOICING & CLAIMS MODULE
+               ========================================================================= */
+            renderBilling(container) {
+                container.innerHTML = `
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-5 shadow-sm">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                            <div>
+                                <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg">Billing Ledger & Insurance Claims</h3>
+                                <p class="text-xs text-slate-400">Generate medical invoices, process payments and manage claims</p>
+                            </div>
+                            <button onclick="app.openInvoiceModal()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-sm flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> Create New Invoice
+                            </button>
+                        </div>
+
+                        <!-- Invoices List -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-800">
+                                        <th class="py-3 px-4">Invoice #</th>
+                                        <th class="py-3 px-4">Patient Name</th>
+                                        <th class="py-3 px-4">Date</th>
+                                        <th class="py-3 px-4">Payment Method</th>
+                                        <th class="py-3 px-4">Total Amount</th>
+                                        <th class="py-3 px-4">Status</th>
+                                        <th class="py-3 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-700 text-xs">
+                                    ${this.db.invoices.map(inv => `
+                                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
+                                            <td class="py-3 px-4 font-mono font-bold text-slate-500">${inv.id}</td>
+                                            <td class="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">${inv.patientName}</td>
+                                            <td class="py-3 px-4 text-slate-500">${inv.date}</td>
+                                            <td class="py-3 px-4 text-slate-600 dark:text-slate-300">${inv.method}</td>
+                                            <td class="py-3 px-4 font-bold text-slate-800 dark:text-slate-100">$${inv.total.toFixed(2)}</td>
+                                            <td class="py-3 px-4">
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                    inv.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                                                }">${inv.status}</span>
+                                            </td>
+                                            <td class="py-3 px-4 text-right space-x-2">
+                                                ${inv.status === 'Unpaid' ? `
+                                                    <button onclick="app.payInvoice('${inv.id}')" title="Mark as Paid" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg"><i class="fa-solid fa-dollar-sign"></i> Pay</button>
+                                                ` : ''}
+                                                <button onclick="app.printInvoice('${inv.id}')" title="Print Receipt" class="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg"><i class="fa-solid fa-print"></i></button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            openInvoiceModal() {
+                const patientId = prompt("Enter Patient MRN (e.g. PAT-1001):", "PAT-1001");
+                const p = this.db.patients.find(item => item.id === patientId);
+                if (!p) {
+                    alert("Patient MRN invalid!");
+                    return;
+                }
+
+                const desc = prompt("Enter Service Description (e.g. General Consultation + Meds):", "Hospital Care Consultation");
+                const amount = parseFloat(prompt("Enter Total Amount ($):", "150.00"));
+
+                if (!desc || isNaN(amount)) return;
+
+                const newInv = {
+                    id: `INV-${Math.floor(8800 + Math.random() * 100)}`,
+                    patientId: p.id,
+                    patientName: p.name,
+                    date: new Date().toISOString().split('T')[0],
+                    items: [{ desc, cost: amount }],
+                    total: amount,
+                    status: 'Unpaid',
+                    method: p.insurance ? `Insurance (${p.insurance})` : 'Cash'
+                };
+
+                this.db.invoices.unshift(newInv);
+                this.saveDB();
+                this.notify(`Invoice ${newInv.id} created successfully!`, 'success');
+                this.renderBilling(document.getElementById('main-content'));
+            }
+
+            payInvoice(id) {
+                const inv = this.db.invoices.find(i => i.id === id);
+                if (inv) {
+                    inv.status = 'Paid';
+                    this.saveDB();
+                    this.notify(`Invoice ${id} paid in full!`, 'success');
+                    this.renderBilling(document.getElementById('main-content'));
+                }
+            }
+
+            printInvoice(id) {
+                const inv = this.db.invoices.find(i => i.id === id);
+                if (!inv) return;
+
+                const area = document.getElementById('printable-area');
+                area.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="flex justify-between items-start border-b pb-4">
+                            <div>
+                                <h2 class="text-2xl font-bold text-slate-900">PulseCare Medical Center</h2>
+                                <p class="text-xs text-slate-500">100 Healthcare Blvd, Medical District, NY</p>
+                            </div>
+                            <div class="text-right">
+                                <h3 class="text-lg font-bold text-slate-700">INVOICE</h3>
+                                <p class="text-xs text-slate-500"># ${inv.id}</p>
+                                <p class="text-xs text-slate-500">Date: ${inv.date}</p>
+                            </div>
+                        </div>
+
+                        <div class="text-xs bg-slate-50 p-4 rounded-xl border">
+                            <p class="font-bold text-slate-700">Billed To:</p>
+                            <p class="text-slate-800">${inv.patientName} (${inv.patientId})</p>
+                            <p class="text-slate-500">Payment Mode: ${inv.method}</p>
+                        </div>
+
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="border-b bg-slate-100">
+                                    <th class="p-2">Description</th>
+                                    <th class="p-2 text-right">Amount ($)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                ${inv.items.map(item => `
+                                    <tr>
+                                        <td class="p-2">${item.desc}</td>
+                                        <td class="p-2 text-right">$${item.cost.toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+
+                        <div class="border-t pt-4 flex justify-between items-center text-xs font-bold">
+                            <span>Status: <span class="uppercase font-extrabold ${inv.status==='Paid'?'text-emerald-600':'text-rose-600'}">${inv.status}</span></span>
+                            <span class="text-base text-slate-900">Total Billed: $${inv.total.toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+                openModal('print-modal');
+            }
+
+            /* =========================================================================
+               9. REPORTS & ANALYTICS MODULE
+               ========================================================================= */
+            renderReports(container) {
+                container.innerHTML = `
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-5 shadow-sm">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                            <div>
+                                <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg">Hospital Analytics & Export Hub</h3>
+                                <p class="text-xs text-slate-400">Export system dataset records and generate executive reports</p>
+                            </div>
+                            <button onclick="app.exportCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-sm flex items-center gap-2">
+                                <i class="fa-solid fa-file-csv"></i> Export Patient Data (CSV)
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="p-4 border dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-700/30">
+                                <h4 class="font-bold text-xs uppercase text-slate-500 mb-2">System Audit Summary</h4>
+                                <ul class="text-xs space-y-2 text-slate-700 dark:text-slate-300">
+                                    <li class="flex justify-between"><span>Total Registered Patients:</span> <strong>${this.db.patients.length}</strong></li>
+                                    <li class="flex justify-between"><span>Appointments Logged:</span> <strong>${this.db.appointments.length}</strong></li>
+                                    <li class="flex justify-between"><span>Pharmacy SKUs Maintained:</span> <strong>${this.db.inventory.length}</strong></li>
+                                    <li class="flex justify-between"><span>Inpatient Wards Managed:</span> <strong>${this.db.beds.length}</strong></li>
+                                </ul>
+                            </div>
+
+                            <div class="p-4 border dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-700/30">
+                                <h4 class="font-bold text-xs uppercase text-slate-500 mb-2">Data Operations</h4>
+                                <p class="text-xs text-slate-500 mb-3">Reset local data store back to baseline factory state.</p>
+                                <button onclick="app.resetSystem()" class="px-3 py-1.5 bg-rose-600 text-white text-xs font-semibold rounded-lg hover:bg-rose-700">
+                                    Factory Reset HMIS LocalStorage
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            exportCSV() {
+                let csv = 'ID,Name,Age,Gender,Phone,Blood,Insurance\n';
+                this.db.patients.forEach(p => {
+                    csv += `"${p.id}","${p.name}",${p.age},"${p.gender}","${p.phone}","${p.blood}","${p.insurance}"\n`;
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `PulseCare_Patients_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                this.notify('Patient records exported to CSV format.', 'success');
+            }
+
+            resetSystem() {
+                if (confirm("Resetting system will restore original sample state. Continue?")) {
+                    localStorage.removeItem(HMIS_STORAGE_KEY);
+                    location.reload();
+                }
+            }
+
+            handleGlobalSearch(query) {
+                // Find matching patient or doctor
+                const matchPatient = this.db.patients.find(p => p.name.toLowerCase().includes(query));
+                if (matchPatient) {
+                    window.location.hash = '#patients';
+                    this.viewPatientProfile(matchPatient.id);
+                }
+            }
+        }
+
+        // Global Utility Functions for Modal Dialogs
+        function openModal(id) {
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById('modal-backdrop').classList.add('hidden');
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // Initialize HMIS App on Page Load
+        let app;
+        window.onload = () => {
+            app = new HMISApp();
+        };
+    </script>
+</body>
+</html>
