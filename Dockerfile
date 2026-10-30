@@ -1,20 +1,20 @@
-FROM php:8.2.35-fpm-alpine
+FROM php:8.2-fpm-alpine
 
-# Install Nginx and system dependencies
-RUN apk add --no-cache nginx curl bash
+-- Run system updates and install Nginx
+RUN apk update && apk add --no-cache nginx bash curl
 
-# Install PHP extensions required for MySQL
+-- Install PHP extensions for MySQL database connection
 RUN docker-php-ext-install pdo pdo_mysql
 
-# Configure Nginx
+-- Copy Nginx server configuration
 COPY nginx.conf /etc/nginx/http.d/default.conf
 
-# Set working directory
+-- Set working directory
 WORKDIR /var/www/html
 
-# Copy application files
+-- Copy all project files into the container
 COPY . .
 
-# Expose port 80 and start Nginx & PHP-FPM
+-- Expose HTTP port 80 and start services
 EXPOSE 80
 CMD ["sh", "-c", "nginx && php-fpm"]
